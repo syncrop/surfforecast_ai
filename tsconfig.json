@@ -11,7 +11,12 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "baseUrl": "./",
-    "incremental": true,
+    // Off: nest-cli.json sets deleteOutDir, which wipes dist/ before every
+    // build. Incremental mode only tracks source-file changes, not whether
+    // its own output still exists, so it can see a stale .tsbuildinfo that
+    // says "up to date" and skip re-emitting entirely - leaving dist/ empty
+    // and `node dist/main` failing with MODULE_NOT_FOUND.
+    "incremental": false,
     "skipLibCheck": true,
     "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,

@@ -78,4 +78,57 @@ describe('ScoringService', () => {
     expect(result.breakdown.swellDirection).toBe(0);
     expect(Number.isFinite(result.score)).toBe(true);
   });
+
+  describe('wave-height conditions cap', () => {
+    // Everything else perfect, so the underlying score alone would be "excellent" -
+    // only waveHeight varies, to isolate the cap from the rest of the weighting.
+    const perfectExceptWave = (waveHeight: number): ForecastSnapshot => ({
+      swellDirection: 280,
+      windDirection: 90,
+      windSpeed: 5,
+      wavePeriod: 14,
+      waveHeight,
+    });
+
+    it('allows excellent/green when waveHeight is at or above 0.7m', () => {
+      const result = scoringService.score(spot, perfectExceptWave(0.7));
+      expect(result.conditions).toBe('excellent');
+    });
+
+    it('caps conditions at "fair" (yellow) when waveHeight is between 0.4m and 0.7m, even with a high score', () => {
+      const result = scoringService.score(spot, perfectExceptWave(0.5));
+      expect(result.conditions).toBe('fair');
+    });
+
+    it('never caps upward: a naturally poor/fair score in the 0.4-0.7m band stays as-is', () => {
+      const badButInRange: ForecastSnapshot = {
+        swellDirection: 90, // way outside optimal
+        windDirection: 270,
+        windSpeed: 35,
+        wavePeriod: 5,
+        waveHeight: 0.5,
+      };
+      const result = scoringService.score(spot, badButInRange);
+      expect(result.conditions).toBe('poor');
+    });
+
+    it('forces "poor" below 0.4m regardless of how good the score is', () => {
+      const result = scoringService.score(spot, perfectExceptWave(0.3));
+      expect(result.conditions).toBe('poor');
+    });
+
+    it('does not apply the cap when waveHeight is null (unknown, not unsurfable)', () => {
+      const forecast: ForecastSnapshot = {
+        swellDirection: 280,
+        windDirection: 90,
+        windSpeed: 5,
+        wavePeriod: 14,
+        waveHeight: null,
+      };
+      const result = scoringService.score(spot, forecast);
+      // waveHeight breakdown scores 0 for null, so the overall bucket is
+      // pulled down by the weighting itself - not by the cap.
+      expect(result.breakdown.waveHeight).toBe(0);
+    });
+  });
 });

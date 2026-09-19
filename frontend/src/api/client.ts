@@ -1,6 +1,15 @@
-import type { RegionSummary, SpotRecommendation, UpcomingSpotRecommendation } from './types';
+import type { RegionSummary, SpotRecommendation, SpotWithLocation, UpcomingSpotRecommendation } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+
+/** All spots, no scoring - used to build the search-box index. Fetched once, not on every keystroke. */
+export async function getAllSpots(): Promise<SpotWithLocation[]> {
+  const res = await fetch(new URL('/spots', API_URL));
+  if (!res.ok) {
+    throw new Error(`API error: ${res.status}`);
+  }
+  return res.json();
+}
 
 /** Cheap DB + scoring read, no throttle concerns - safe to call on every map pan. */
 export async function getRecommendations(

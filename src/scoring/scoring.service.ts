@@ -30,6 +30,16 @@ const WIND_SPEED_FULL_PENALTY_KMH = 40;
 const PERIOD_MIN_S = 6;
 const PERIOD_MAX_S = 12;
 
+// Absolute physical floor, independent of any spot's configured optimal
+// range: below this there's essentially no wave to ride. Below
+// GOOD_WAVE_THRESHOLD_M it's marginal - conditions cap at "fair" (yellow)
+// no matter how good swell direction/wind/period look, since a great swell
+// angle on a 0.5m ripple still isn't a good session.
+const MIN_SURFABLE_WAVE_M = 0.4;
+const GOOD_WAVE_THRESHOLD_M = 0.7;
+
+const CONDITIONS_ORDER: Conditions[] = ['poor', 'fair', 'good', 'excellent'];
+
 function clamp(value: number, min = 0, max = 100): number {
   return Math.min(max, Math.max(min, value));
 }
@@ -55,14 +65,27 @@ export class ScoringService {
         breakdown.period * WEIGHTS.period,
     );
 
-    return { score, breakdown, conditions: this.toConditions(score) };
+    return { score, breakdown, conditions: this.toConditions(score, forecast.waveHeight) };
   }
 
-  private toConditions(score: number): Conditions {
+  private toConditions(score: number, waveHeight: number | null): Conditions {
+    const bucket = this.scoreToBucket(score);
+    if (waveHeight == null) return bucket;
+    if (waveHeight < MIN_SURFABLE_WAVE_M) return 'poor';
+    if (waveHeight < GOOD_WAVE_THRESHOLD_M) return this.capConditions(bucket, 'fair');
+    return bucket;
+  }
+
+  private scoreToBucket(score: number): Conditions {
     if (score >= 80) return 'excellent';
     if (score >= 60) return 'good';
     if (score >= 35) return 'fair';
     return 'poor';
+  }
+
+  private capConditions(bucket: Conditions, max: Conditions): Conditions {
+    const capped = Math.min(CONDITIONS_ORDER.indexOf(bucket), CONDITIONS_ORDER.indexOf(max));
+    return CONDITIONS_ORDER[capped];
   }
 
   private scoreSwellDirection(spot: SpotProfile, forecast: ForecastSnapshot): number {

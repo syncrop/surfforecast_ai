@@ -17,18 +17,41 @@ function Recenter({ center }: RecenterProps) {
   return null;
 }
 
-interface MoveListenerProps {
-  onMoveEnd: (center: GeoLocation) => void;
+export interface MapMoveEnd extends GeoLocation {
+  zoom: number;
 }
 
-/** Reports the map's center once the user finishes panning/zooming, so the parent can fetch spots for that area. */
+interface MoveListenerProps {
+  onMoveEnd: (center: MapMoveEnd) => void;
+}
+
+/** Reports the map's center + zoom once the user finishes panning/zooming, so the parent can fetch spots for that area (or decide it's too zoomed out to bother). */
 function MoveListener({ onMoveEnd }: MoveListenerProps) {
   const map = useMapEvents({
     moveend: () => {
       const center = map.getCenter();
-      onMoveEnd({ lat: center.lat, lon: center.lng });
+      onMoveEnd({ lat: center.lat, lon: center.lng, zoom: map.getZoom() });
     },
   });
+  return null;
+}
+
+export interface FlyToRequest {
+  lat: number;
+  lon: number;
+  zoom: number;
+  /** Bumped on every request so identical coordinates (e.g. searching the same spot twice) still re-trigger the flight. */
+  requestId: number;
+}
+
+/** Imperative "jump to this location" trigger, distinct from Recenter (physical location) and panning (passive, no forced movement). */
+function FlyTo({ request }: { request: FlyToRequest | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!request) return;
+    map.flyTo([request.lat, request.lon], request.zoom);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [request?.requestId]);
   return null;
 }
 
@@ -37,7 +60,8 @@ interface MapViewProps {
   userLocation: GeoLocation;
   selectedSlug: string | null;
   onSelect: (slug: string) => void;
-  onMoveEnd: (center: GeoLocation) => void;
+  onMoveEnd: (center: MapMoveEnd) => void;
+  flyToRequest: FlyToRequest | null;
 }
 
 export function MapView({
@@ -46,6 +70,7 @@ export function MapView({
   selectedSlug,
   onSelect,
   onMoveEnd,
+  flyToRequest,
 }: MapViewProps) {
   const center: [number, number] = [userLocation.lat, userLocation.lon];
 
@@ -53,6 +78,7 @@ export function MapView({
     <MapContainer center={center} zoom={11} scrollWheelZoom className="map">
       <Recenter center={center} />
       <MoveListener onMoveEnd={onMoveEnd} />
+      <FlyTo request={flyToRequest} />
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
