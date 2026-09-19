@@ -43,6 +43,34 @@
   white-space: nowrap;
 }
 
+/* "Ahora" / "Próximos N días" segmented control */
+.mode-switch {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.mode-switch__option {
+  border: none;
+  border-radius: 0;
+  background: var(--bg);
+  color: var(--text);
+  padding: 8px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mode-switch__option + .mode-switch__option {
+  border-left: 1px solid var(--border);
+}
+
+.app__controls .mode-switch__option--active {
+  background: var(--accent);
+  color: white;
+}
+
 .app__map {
   flex: 1 1 42%;
   min-height: 180px;

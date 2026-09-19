@@ -13,11 +13,10 @@ const RADIUS_OPTIONS = [
   { label: '50 km', value: 50_000 },
 ];
 
-const DAYS_OPTIONS = [
-  { label: '1 día', value: 1 },
-  { label: '2 días', value: 2 },
-  { label: '3 días', value: 3 },
-];
+const DAYS_OPTIONS = [1, 2, 3, 4, 5].map((value) => ({
+  label: `Próximos ${value} día${value > 1 ? 's' : ''}`,
+  value,
+}));
 
 type Mode = 'now' | 'upcoming';
 
@@ -58,19 +57,30 @@ export default function App() {
       <header className="app__header">
         <h1>SurfForecast</h1>
         <div className="app__controls">
-          <select value={mode} onChange={(e) => selectMode(e.target.value as Mode)}>
-            <option value="now">Ahora</option>
-            <option value="upcoming">Próximos días</option>
-          </select>
-          {mode === 'upcoming' && (
-            <select value={days} onChange={(e) => setDays(Number(e.target.value))}>
+          <div className="mode-switch">
+            <button
+              className={`mode-switch__option ${mode === 'now' ? 'mode-switch__option--active' : ''}`}
+              onClick={() => selectMode('now')}
+            >
+              Ahora
+            </button>
+            <select
+              className={`mode-switch__option mode-switch__option--select ${
+                mode === 'upcoming' ? 'mode-switch__option--active' : ''
+              }`}
+              value={days}
+              onChange={(e) => {
+                setDays(Number(e.target.value));
+                selectMode('upcoming');
+              }}
+            >
               {DAYS_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
               ))}
             </select>
-          )}
+          </div>
           <select value={radius} onChange={(e) => setRadius(Number(e.target.value))}>
             {RADIUS_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>

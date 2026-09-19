@@ -3,7 +3,7 @@ import { ForecastPoint, MarineForecastProvider } from './marine-forecast.provide
 
 const MARINE_URL = 'https://marine-api.open-meteo.com/v1/marine';
 const WEATHER_URL = 'https://api.open-meteo.com/v1/forecast';
-const FORECAST_DAYS = 3;
+const FORECAST_DAYS = 5;
 const REQUEST_TIMEOUT_MS = 10_000;
 
 /** How many days of forecast the ingest cron actually fetches - the hard cap for any "upcoming days" query. */
