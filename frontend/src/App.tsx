@@ -13,8 +13,8 @@ const RADIUS_OPTIONS = [
   { label: '50 km', value: 50_000 },
 ];
 
-const DAYS_OPTIONS = [1, 2, 3, 4, 5].map((value) => ({
-  label: `Próximos ${value} día${value > 1 ? 's' : ''}`,
+const DAYS_OPTIONS = [3, 5, 7].map((value) => ({
+  label: `Próximos ${value} días`,
   value,
 }));
 

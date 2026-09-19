@@ -13,6 +13,8 @@
     "migration:revert": "npm run typeorm -- migration:revert",
     "seed:spots": "ts-node -r tsconfig-paths/register src/seed/seed-spots.ts",
     "seed:canary": "ts-node -r tsconfig-paths/register seeds/seed-canary-spots.ts",
+    "seed:huelva-algarve": "ts-node -r tsconfig-paths/register seeds/seed-huelva-algarve-spots.ts",
+    "seed:vicentina-alentejo": "ts-node -r tsconfig-paths/register seeds/seed-vicentina-alentejo-spots.ts",
     "test": "jest"
   },
   "dependencies": {
