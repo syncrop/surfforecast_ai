@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { CircleMarker, MapContainer, Popup, TileLayer, useMap } from 'react-leaflet';
+import { CircleMarker, MapContainer, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import type { SpotRecommendation } from '../api/types';
 import { CONDITIONS_COLOR, conditionsKey } from '../lib/conditions';
 import type { GeoLocation } from '../hooks/useGeolocation';
@@ -17,19 +17,42 @@ function Recenter({ center }: RecenterProps) {
   return null;
 }
 
+interface MoveListenerProps {
+  onMoveEnd: (center: GeoLocation) => void;
+}
+
+/** Reports the map's center once the user finishes panning/zooming, so the parent can fetch spots for that area. */
+function MoveListener({ onMoveEnd }: MoveListenerProps) {
+  const map = useMapEvents({
+    moveend: () => {
+      const center = map.getCenter();
+      onMoveEnd({ lat: center.lat, lon: center.lng });
+    },
+  });
+  return null;
+}
+
 interface MapViewProps {
   recommendations: SpotRecommendation[];
   userLocation: GeoLocation;
   selectedSlug: string | null;
   onSelect: (slug: string) => void;
+  onMoveEnd: (center: GeoLocation) => void;
 }
 
-export function MapView({ recommendations, userLocation, selectedSlug, onSelect }: MapViewProps) {
+export function MapView({
+  recommendations,
+  userLocation,
+  selectedSlug,
+  onSelect,
+  onMoveEnd,
+}: MapViewProps) {
   const center: [number, number] = [userLocation.lat, userLocation.lon];
 
   return (
     <MapContainer center={center} zoom={11} scrollWheelZoom className="map">
       <Recenter center={center} />
+      <MoveListener onMoveEnd={onMoveEnd} />
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

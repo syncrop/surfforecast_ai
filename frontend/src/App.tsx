@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MapView } from './components/MapView';
 import { SpotList } from './components/SpotList';
 import { SpotDetail } from './components/SpotDetail';
-import { useGeolocation } from './hooks/useGeolocation';
+import { useGeolocation, type GeoLocation } from './hooks/useGeolocation';
 import { useRecommendations } from './hooks/useRecommendations';
 import { useUpcomingRecommendations } from './hooks/useUpcomingRecommendations';
 import './App.css';
@@ -27,10 +27,19 @@ export default function App() {
   const [days, setDays] = useState(3);
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
 
-  const now = useRecommendations(location.lat, location.lon, radius);
+  // Spots are fetched around mapCenter, not the user's physical location, so
+  // panning the map updates the results. mapCenter re-syncs to `location`
+  // only on an explicit "Mi ubicación" click (or the initial fallback), never
+  // while the user is just dragging the map around.
+  const [mapCenter, setMapCenter] = useState<GeoLocation>(location);
+  useEffect(() => {
+    setMapCenter(location);
+  }, [location]);
+
+  const now = useRecommendations(mapCenter.lat, mapCenter.lon, radius);
   const upcoming = useUpcomingRecommendations(
-    location.lat,
-    location.lon,
+    mapCenter.lat,
+    mapCenter.lon,
     radius,
     days,
     mode === 'upcoming',
@@ -100,6 +109,7 @@ export default function App() {
           userLocation={location}
           selectedSlug={selectedSlug}
           onSelect={setSelectedSlug}
+          onMoveEnd={setMapCenter}
         />
       </div>
 
