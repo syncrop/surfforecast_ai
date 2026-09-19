@@ -50,10 +50,9 @@ export interface SpotRecommendation {
   forecast: ForecastUsed | null;
 }
 
-export interface RecommendationsWithSummary {
+export interface RegionSummary {
   summary: string | null;
-  summaryGeneratedAt: string | null;
-  recommendations: SpotRecommendation[];
+  generatedAt: string | null;
 }
 
 export interface DayScore {

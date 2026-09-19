@@ -218,4 +218,30 @@ describe('SpotsService', () => {
       expect(spotsRepository.upsertRegionSummary).toHaveBeenCalledWith('North Shore', 'text');
     });
   });
+
+  describe('getCachedRegionSummary', () => {
+    it('reads the cache directly, without touching recommendations or Claude', async () => {
+      const { service, spotsRepository, surfSummaryService } = makeService();
+      spotsRepository.findRegionSummary.mockResolvedValue({
+        summary: 'cached text',
+        generatedAt: new Date('2026-01-01T00:00:00Z'),
+      });
+
+      const result = await service.getCachedRegionSummary('North Shore');
+
+      expect(result).toEqual({ summary: 'cached text', generatedAt: new Date('2026-01-01T00:00:00Z') });
+      expect(spotsRepository.findRegionSummary).toHaveBeenCalledWith('North Shore');
+      expect(spotsRepository.findNearbyWithLatestForecast).not.toHaveBeenCalled();
+      expect(surfSummaryService.summarize).not.toHaveBeenCalled();
+    });
+
+    it('returns nulls when no cached summary exists yet', async () => {
+      const { service, spotsRepository } = makeService();
+      spotsRepository.findRegionSummary.mockResolvedValue(null);
+
+      const result = await service.getCachedRegionSummary('North Shore');
+
+      expect(result).toEqual({ summary: null, generatedAt: null });
+    });
+  });
 });

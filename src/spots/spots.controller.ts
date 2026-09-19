@@ -18,6 +18,7 @@ import { NearbySpotDto, SpotWithLocationDto } from './dto/spot-with-location.dto
 import { SpotRecommendationDto, UpcomingSpotRecommendationDto } from './dto/recommendation.dto';
 import { RecommendationsSummaryDto } from './dto/recommendations-summary.dto';
 import { RecommendationsWithSummaryDto } from './dto/recommendations-with-summary.dto';
+import { RegionSummaryDto } from './dto/region-summary.dto';
 import { UpcomingRecommendationsDto } from './dto/upcoming-recommendations.dto';
 import { SpotsService } from './spots.service';
 
@@ -97,6 +98,19 @@ export class SpotsController {
       query.radius ?? 20_000,
       query.query,
     );
+  }
+
+  @ApiOperation({
+    summary: 'Cached natural-language summary for a region',
+    description:
+      'Just the cached text the ingest cron already generated - no scoring, no Claude call, ' +
+      'no tight throttle. Meant for on-demand use (e.g. opening a spot detail view), not for ' +
+      'polling on every map pan.',
+  })
+  @ApiOkResponse({ type: RegionSummaryDto })
+  @Get('regions/:region/summary')
+  getCachedRegionSummary(@Param('region') region: string) {
+    return this.spotsService.getCachedRegionSummary(region);
   }
 
   @ApiOperation({ summary: 'Get a spot by slug' })

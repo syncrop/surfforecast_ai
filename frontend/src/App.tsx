@@ -1,11 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MapView } from './components/MapView';
 import { SpotList } from './components/SpotList';
 import { SpotDetail } from './components/SpotDetail';
 import { useGeolocation, type GeoLocation } from './hooks/useGeolocation';
 import { useRecommendations } from './hooks/useRecommendations';
+import { useRegionSummary } from './hooks/useRegionSummary';
 import { useUpcomingRecommendations } from './hooks/useUpcomingRecommendations';
 import './App.css';
+
+/** Collapses rapid moveend events (a drag + inertia, a couple of scroll-zooms) into one fetch. */
+const MAP_MOVE_DEBOUNCE_MS = 500;
 
 const RADIUS_OPTIONS = [
   { label: '10 km', value: 10_000 },
@@ -36,6 +40,17 @@ export default function App() {
     setMapCenter(location);
   }, [location]);
 
+  // Debounced so a drag gesture (which can fire several moveend events via
+  // inertia) or a couple of quick scroll-zooms collapse into one fetch
+  // instead of one per event.
+  const moveTimeoutRef = useRef<number | null>(null);
+  function handleMapMoveEnd(next: GeoLocation) {
+    if (moveTimeoutRef.current != null) {
+      window.clearTimeout(moveTimeoutRef.current);
+    }
+    moveTimeoutRef.current = window.setTimeout(() => setMapCenter(next), MAP_MOVE_DEBOUNCE_MS);
+  }
+
   const now = useRecommendations(mapCenter.lat, mapCenter.lon, radius);
   const upcoming = useUpcomingRecommendations(
     mapCenter.lat,
@@ -47,14 +62,20 @@ export default function App() {
 
   const loading = mode === 'now' ? now.loading : upcoming.loading;
   const error = mode === 'now' ? now.error : upcoming.error;
-  const recommendations = mode === 'now' ? now.data?.recommendations ?? [] : upcoming.data;
-  const regionSummary = mode === 'now' ? now.data?.summary ?? null : null;
+  const recommendations = mode === 'now' ? now.data : upcoming.data;
 
   const selectedRecommendation = recommendations.find((r) => r.spot.slug === selectedSlug) ?? null;
   const selectedDailyBest =
     mode === 'upcoming' && selectedRecommendation && 'dailyBest' in selectedRecommendation
       ? selectedRecommendation.dailyBest
       : undefined;
+
+  // Fetched on-demand only while a spot's detail view is open in "now" mode -
+  // never on every map pan (see useRecommendations for the frequent path).
+  const { summary: regionSummary } = useRegionSummary(
+    selectedRecommendation?.spot.region ?? null,
+    mode === 'now' && selectedRecommendation != null,
+  );
 
   function selectMode(next: Mode) {
     setMode(next);
@@ -109,7 +130,7 @@ export default function App() {
           userLocation={location}
           selectedSlug={selectedSlug}
           onSelect={setSelectedSlug}
-          onMoveEnd={setMapCenter}
+          onMoveEnd={handleMapMoveEnd}
         />
       </div>
 

@@ -73,6 +73,19 @@ export class SpotsService {
   }
 
   /**
+   * Just the cached summary for a region - no scoring, no recommendations,
+   * never touches Claude. Meant to be called on-demand (e.g. when the user
+   * opens a spot's detail view), decoupled from the list/map data so panning
+   * the map doesn't also re-fetch a summary on every move.
+   */
+  async getCachedRegionSummary(
+    region: string,
+  ): Promise<{ summary: string | null; generatedAt: Date | null }> {
+    const cached = await this.spotsRepository.findRegionSummary(region);
+    return { summary: cached?.summary ?? null, generatedAt: cached?.generatedAt ?? null };
+  }
+
+  /**
    * Natural-language summary for a location. Calling Claude on every request
    * would multiply LLM calls by every user hitting the same spot, so the
    * default path reads a summary the ingest cron already generated and
