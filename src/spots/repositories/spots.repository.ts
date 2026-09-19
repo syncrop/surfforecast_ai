@@ -214,6 +214,59 @@ export class SpotsRepository extends Repository<Spot> {
     );
   }
 
+  /**
+   * Spots within `radiusMeters` of (lat, lon), each joined to every forecast
+   * row falling between now and `days` days from now (ascending). Unlike
+   * {@link findNearbyWithLatestForecast}, which returns one row per spot,
+   * this returns one row per (spot, forecast) pair so the caller can score
+   * every hourly window and pick the best one within that range. A spot with
+   * no forecast rows in the window still appears once, with `forecastId`
+   * null.
+   */
+  async findNearbyWithForecastWindow(
+    lat: number,
+    lon: number,
+    radiusMeters: number,
+    days: number,
+  ): Promise<NearbySpotWithForecastRow[]> {
+    return this.dataSource.query<NearbySpotWithForecastRow[]>(
+      `
+      SELECT
+        "spots"."id", "spots"."name", "spots"."slug", "spots"."region", "spots"."country",
+        "spots"."breakType", "spots"."bottom",
+        "spots"."optimalSwellDirMin", "spots"."optimalSwellDirMax",
+        "spots"."optimalWindDirMin", "spots"."optimalWindDirMax",
+        "spots"."optimalWaveMin", "spots"."optimalWaveMax",
+        "spots"."skillLevel", "spots"."sourceUrl",
+        ST_Y("spots"."location"::geometry) AS lat,
+        ST_X("spots"."location"::geometry) AS lon,
+        ST_Distance("spots"."location", ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) AS distance,
+        f."forecastId", f."forecastTime", f."fetchedAt", f."waveHeight", f."wavePeriod",
+        f."swellDirection", f."windSpeed", f."windDirection", f."tideHeight"
+      FROM "spots"
+      LEFT JOIN LATERAL (
+        SELECT
+          "id" AS "forecastId",
+          "forecastTime",
+          "fetchedAt",
+          "waveHeight",
+          "wavePeriod",
+          "swellDirection",
+          "windSpeed",
+          "windDirection",
+          "tideHeight"
+        FROM "forecasts"
+        WHERE "forecasts"."spotId" = "spots"."id"
+          AND "forecastTime" BETWEEN now() AND now() + ($4::int * INTERVAL '1 day')
+        ORDER BY "forecastTime" ASC
+      ) f ON true
+      WHERE ST_DWithin("spots"."location", ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, $3)
+      ORDER BY distance ASC, f."forecastTime" ASC
+      `,
+      [lon, lat, radiusMeters, days],
+    );
+  }
+
   /** Cached natural-language summary for a region, or null if none has been generated yet. */
   async findRegionSummary(region: string): Promise<{ summary: string; generatedAt: Date } | null> {
     const rows = await this.dataSource.query<Array<{ summary: string; generatedAt: Date }>>(

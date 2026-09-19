@@ -8,8 +8,9 @@
 .app__header {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px 12px;
   padding: 10px 14px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -22,6 +23,8 @@
 
 .app__controls {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
 }
 
@@ -32,6 +35,7 @@
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
+  font-size: 13px;
 }
 
 .app__controls button {
@@ -162,6 +166,44 @@
 
 .spot-row__conditions {
   color: var(--text-muted);
+}
+
+/* Daily best (upcoming-days mode) */
+.daily-best {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.daily-best__item {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-size: 13px;
+}
+
+.daily-best__date {
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+
+.daily-best__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.daily-best__score {
+  font-weight: 600;
 }
 
 /* Spot detail */

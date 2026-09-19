@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { SurfSummaryService } from '../ai/surf-summary.service';
+import { Conditions } from '../scoring/scoring.types';
 import { ScoringService } from '../scoring/scoring.service';
 import { CreateSpotDto } from './dto/create-spot.dto';
-import { SpotRecommendationDto } from './dto/recommendation.dto';
+import { DayScoreDto, SpotRecommendationDto, UpcomingSpotRecommendationDto } from './dto/recommendation.dto';
 import { RecommendationsWithSummaryDto } from './dto/recommendations-with-summary.dto';
 import { NearbySpotDto, SpotWithLocationDto } from './dto/spot-with-location.dto';
 import { NearbySpotWithForecastRow, SpotsRepository } from './repositories/spots.repository';
@@ -38,6 +39,26 @@ export class SpotsService {
   ): Promise<SpotRecommendationDto[]> {
     const rows = await this.spotsRepository.findNearbyWithLatestForecast(lat, lon, radiusMeters);
     return this.toRecommendations(rows);
+  }
+
+  /**
+   * Spots within radius, each scored against its best-scoring forecast
+   * window over the next `days` days (not just "now"). Pure DB + scoring
+   * engine, no AI involved - same reasoning as {@link getRecommendations}.
+   */
+  async getUpcomingRecommendations(
+    lat: number,
+    lon: number,
+    radiusMeters: number,
+    days: number,
+  ): Promise<UpcomingSpotRecommendationDto[]> {
+    const rows = await this.spotsRepository.findNearbyWithForecastWindow(
+      lat,
+      lon,
+      radiusMeters,
+      days,
+    );
+    return this.toUpcomingRecommendations(rows);
   }
 
   /** All spots in a region with their current forecast, scored. Used by the ingest cron to build region summaries. */
@@ -128,6 +149,115 @@ export class SpotsService {
         },
       };
     });
+
+    return recommendations.sort((a, b) => {
+      if (a.score == null && b.score == null) return 0;
+      if (a.score == null) return 1;
+      if (b.score == null) return -1;
+      return b.score - a.score;
+    });
+  }
+
+  /**
+   * Groups the (spot, forecast) rows by spot, scores every forecast row in
+   * the window, and keeps the best-scoring one per spot plus a per-day peak
+   * (`dailyBest`) so the UI can show which day is worth going without
+   * fetching each day separately.
+   */
+  private toUpcomingRecommendations(
+    rows: NearbySpotWithForecastRow[],
+  ): UpcomingSpotRecommendationDto[] {
+    interface Group {
+      spot: SpotWithLocationDto;
+      distance: number;
+      forecastRows: NearbySpotWithForecastRow[];
+    }
+
+    const bySpot = new Map<string, Group>();
+    for (const row of rows) {
+      const {
+        distance,
+        forecastId,
+        forecastTime,
+        fetchedAt,
+        waveHeight,
+        wavePeriod,
+        swellDirection,
+        windSpeed,
+        windDirection,
+        tideHeight,
+        ...spot
+      } = row;
+
+      let group = bySpot.get(spot.id);
+      if (!group) {
+        group = { spot, distance, forecastRows: [] };
+        bySpot.set(spot.id, group);
+      }
+      if (forecastId) {
+        group.forecastRows.push(row);
+      }
+    }
+
+    const recommendations: UpcomingSpotRecommendationDto[] = Array.from(bySpot.values()).map(
+      ({ spot, distance, forecastRows }) => {
+        if (forecastRows.length === 0) {
+          return {
+            spot,
+            distance,
+            score: null,
+            breakdown: null,
+            conditions: null,
+            forecast: null,
+            dailyBest: [],
+          };
+        }
+
+        const scored = forecastRows.map((row) => ({
+          row,
+          result: this.scoringService.score(spot, {
+            waveHeight: row.waveHeight,
+            wavePeriod: row.wavePeriod,
+            swellDirection: row.swellDirection,
+            windSpeed: row.windSpeed,
+            windDirection: row.windDirection,
+          }),
+        }));
+
+        const best = scored.reduce((a, b) => (b.result.score > a.result.score ? b : a));
+
+        const byDate = new Map<string, { score: number; conditions: Conditions }>();
+        for (const { row, result } of scored) {
+          const date = (row.forecastTime as Date).toISOString().slice(0, 10);
+          const existing = byDate.get(date);
+          if (!existing || result.score > existing.score) {
+            byDate.set(date, { score: result.score, conditions: result.conditions });
+          }
+        }
+        const dailyBest: DayScoreDto[] = Array.from(byDate.entries())
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([date, v]) => ({ date, score: v.score, conditions: v.conditions }));
+
+        return {
+          spot,
+          distance,
+          score: best.result.score,
+          breakdown: best.result.breakdown,
+          conditions: best.result.conditions,
+          forecast: {
+            forecastTime: best.row.forecastTime as Date,
+            fetchedAt: best.row.fetchedAt as Date,
+            waveHeight: best.row.waveHeight as number,
+            wavePeriod: best.row.wavePeriod as number,
+            swellDirection: best.row.swellDirection as number,
+            windSpeed: best.row.windSpeed as number,
+            windDirection: best.row.windDirection as number,
+            tideHeight: best.row.tideHeight,
+          },
+          dailyBest,
+        };
+      },
+    );
 
     return recommendations.sort((a, b) => {
       if (a.score == null && b.score == null) return 0;

@@ -6,6 +6,9 @@ const WEATHER_URL = 'https://api.open-meteo.com/v1/forecast';
 const FORECAST_DAYS = 3;
 const REQUEST_TIMEOUT_MS = 10_000;
 
+/** How many days of forecast the ingest cron actually fetches - the hard cap for any "upcoming days" query. */
+export const FORECAST_HORIZON_DAYS = FORECAST_DAYS;
+
 interface HourlySeries {
   time: string[];
   [key: string]: (number | null)[] | string[];

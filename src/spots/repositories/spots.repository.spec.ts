@@ -90,6 +90,20 @@ describe('SpotsRepository', () => {
     });
   });
 
+  describe('findNearbyWithForecastWindow', () => {
+    it('passes params as [lon, lat, radius, days] and filters forecasts to that window', async () => {
+      const { repository, query } = makeRepository();
+      query.mockResolvedValue([]);
+
+      await repository.findNearbyWithForecastWindow(28.6, -14.0, 5000, 3);
+
+      const [sql, params] = query.mock.calls[0];
+      expectPlaceholdersMatchParams(sql, params);
+      expect(params).toEqual([-14.0, 28.6, 5000, 3]);
+      expect(sql).toContain(`"forecastTime" BETWEEN now() AND now() + ($4::int * INTERVAL '1 day')`);
+    });
+  });
+
   describe('findByRegionWithLatestForecast', () => {
     it('filters by region and hardcodes distance to 0 (no reference point)', async () => {
       const { repository, query } = makeRepository();

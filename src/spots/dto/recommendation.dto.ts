@@ -47,3 +47,29 @@ export class SpotRecommendationDto {
   @ApiProperty({ type: ForecastUsedDto, nullable: true })
   forecast: ForecastUsedDto | null;
 }
+
+export class DayScoreDto {
+  @ApiProperty({ example: '2026-01-02', description: 'UTC calendar date (YYYY-MM-DD).' })
+  date: string;
+
+  @ApiProperty({ minimum: 0, maximum: 100, description: 'Best score reached that day.' })
+  score: number;
+
+  @ApiProperty({ enum: CONDITIONS_VALUES })
+  conditions: Conditions;
+}
+
+/**
+ * Same shape as {@link SpotRecommendationDto}, but `score`/`breakdown`/
+ * `conditions`/`forecast` describe the best-scoring hourly window found
+ * anywhere in the requested day range (not "now"). `dailyBest` gives the
+ * per-day peak so the UI can show which day is worth going.
+ */
+@ApiExtraModels(DayScoreDto)
+export class UpcomingSpotRecommendationDto extends SpotRecommendationDto {
+  @ApiProperty({
+    type: [DayScoreDto],
+    description: 'Best score reached each day within the requested window, sorted by date ascending.',
+  })
+  dailyBest: DayScoreDto[];
+}

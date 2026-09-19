@@ -55,3 +55,14 @@ export interface RecommendationsWithSummary {
   summaryGeneratedAt: string | null;
   recommendations: SpotRecommendation[];
 }
+
+export interface DayScore {
+  date: string;
+  score: number;
+  conditions: Conditions;
+}
+
+/** Same shape as SpotRecommendation, but score/breakdown/conditions/forecast describe the best window found in the requested range, not "now". */
+export interface UpcomingSpotRecommendation extends SpotRecommendation {
+  dailyBest: DayScore[];
+}

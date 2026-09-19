@@ -11,12 +11,14 @@ import {
 import { ApiOperation, ApiHeader, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AdminGuard } from '../common/guards/admin.guard';
+import { FORECAST_HORIZON_DAYS } from '../forecasts/providers/open-meteo.provider';
 import { CreateSpotDto } from './dto/create-spot.dto';
 import { FindNearbySpotsDto } from './dto/find-nearby-spots.dto';
 import { NearbySpotDto, SpotWithLocationDto } from './dto/spot-with-location.dto';
-import { SpotRecommendationDto } from './dto/recommendation.dto';
+import { SpotRecommendationDto, UpcomingSpotRecommendationDto } from './dto/recommendation.dto';
 import { RecommendationsSummaryDto } from './dto/recommendations-summary.dto';
 import { RecommendationsWithSummaryDto } from './dto/recommendations-with-summary.dto';
+import { UpcomingRecommendationsDto } from './dto/upcoming-recommendations.dto';
 import { SpotsService } from './spots.service';
 
 @ApiTags('spots')
@@ -55,6 +57,25 @@ export class SpotsController {
   @Get('recommendations')
   getRecommendations(@Query() query: FindNearbySpotsDto) {
     return this.spotsService.getRecommendations(query.lat, query.lon, query.radius ?? 20_000);
+  }
+
+  // Must come before ':slug' so it isn't swallowed by that route.
+  @ApiOperation({
+    summary: 'Spots within a radius, scored against their best forecast window over the next N days',
+    description:
+      'Unlike /recommendations (which scores only the current conditions), this scans every ' +
+      'hourly forecast in the window and returns each spot\'s best moment plus a per-day peak ' +
+      '(dailyBest), so you can see which day is worth going.',
+  })
+  @ApiOkResponse({ type: [UpcomingSpotRecommendationDto] })
+  @Get('recommendations/upcoming')
+  getUpcomingRecommendations(@Query() query: UpcomingRecommendationsDto) {
+    return this.spotsService.getUpcomingRecommendations(
+      query.lat,
+      query.lon,
+      query.radius ?? 20_000,
+      query.days ?? FORECAST_HORIZON_DAYS,
+    );
   }
 
   // Must come before ':slug' so it isn't swallowed by that route.

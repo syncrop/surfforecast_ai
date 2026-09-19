@@ -1,4 +1,4 @@
-import type { SpotRecommendation } from '../api/types';
+import type { DayScore, SpotRecommendation } from '../api/types';
 import { CONDITIONS_COLOR, CONDITIONS_LABEL, conditionsKey } from '../lib/conditions';
 import { formatDirection } from '../lib/direction';
 
@@ -9,15 +9,20 @@ const FACTOR_LABEL: Record<string, string> = {
   period: 'Periodo',
 };
 
+const WEEKDAY_FORMAT = new Intl.DateTimeFormat('es-ES', { weekday: 'short', day: 'numeric' });
+
 interface SpotDetailProps {
   recommendation: SpotRecommendation;
   regionSummary: string | null;
   onBack: () => void;
+  /** Present only when viewing the "upcoming days" mode: the best score reached each day. */
+  dailyBest?: DayScore[];
 }
 
-export function SpotDetail({ recommendation, regionSummary, onBack }: SpotDetailProps) {
+export function SpotDetail({ recommendation, regionSummary, onBack, dailyBest }: SpotDetailProps) {
   const { spot, score, breakdown, conditions, forecast } = recommendation;
   const key = conditionsKey(conditions);
+  const isUpcoming = dailyBest != null;
 
   return (
     <div className="spot-detail">
@@ -37,6 +42,29 @@ export function SpotDetail({ recommendation, regionSummary, onBack }: SpotDetail
         {spot.skillLevel}
       </p>
 
+      {isUpcoming && dailyBest.length > 0 && (
+        <section>
+          <h3>Por día</h3>
+          <ul className="daily-best">
+            {dailyBest.map((day) => {
+              const dayKey = conditionsKey(day.conditions);
+              return (
+                <li key={day.date} className="daily-best__item">
+                  <span className="daily-best__date">
+                    {WEEKDAY_FORMAT.format(new Date(`${day.date}T12:00:00Z`))}
+                  </span>
+                  <span
+                    className="daily-best__dot"
+                    style={{ backgroundColor: CONDITIONS_COLOR[dayKey] }}
+                  />
+                  <span className="daily-best__score">{day.score}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
       {breakdown && (
         <section>
           <h3>Desglose</h3>
@@ -54,7 +82,7 @@ export function SpotDetail({ recommendation, regionSummary, onBack }: SpotDetail
 
       {forecast && (
         <section>
-          <h3>Condiciones actuales</h3>
+          <h3>{isUpcoming ? 'Mejor momento' : 'Condiciones actuales'}</h3>
           <dl className="forecast-grid">
             <dt>Ola</dt>
             <dd>{forecast.waveHeight} m</dd>
@@ -73,12 +101,14 @@ export function SpotDetail({ recommendation, regionSummary, onBack }: SpotDetail
         </section>
       )}
 
-      <section>
-        <h3>Resumen de la zona</h3>
-        <p className="summary-text">
-          {regionSummary ?? 'Aún no hay resumen generado para esta zona.'}
-        </p>
-      </section>
+      {!isUpcoming && (
+        <section>
+          <h3>Resumen de la zona</h3>
+          <p className="summary-text">
+            {regionSummary ?? 'Aún no hay resumen generado para esta zona.'}
+          </p>
+        </section>
+      )}
 
       {spot.sourceUrl && (
         <a className="source-link" href={spot.sourceUrl} target="_blank" rel="noreferrer">
