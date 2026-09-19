@@ -1,5 +1,6 @@
 import type { SpotRecommendation } from '../api/types';
 import { CONDITIONS_COLOR, CONDITIONS_LABEL, conditionsKey } from '../lib/conditions';
+import { formatDirection } from '../lib/direction';
 
 const FACTOR_LABEL: Record<string, string> = {
   swellDirection: 'Dirección del swell',
@@ -60,10 +61,10 @@ export function SpotDetail({ recommendation, regionSummary, onBack }: SpotDetail
             <dt>Periodo</dt>
             <dd>{forecast.wavePeriod} s</dd>
             <dt>Swell</dt>
-            <dd>{forecast.swellDirection}°</dd>
+            <dd>{formatDirection(forecast.swellDirection)}</dd>
             <dt>Viento</dt>
             <dd>
-              {forecast.windSpeed} km/h · {forecast.windDirection}°
+              {forecast.windSpeed} km/h · {formatDirection(forecast.windDirection)}
             </dd>
           </dl>
           <p className="forecast-time">
