@@ -122,6 +122,15 @@ export default function App() {
             {status === 'locating' ? 'Localizando…' : '📍 Mi ubicación'}
           </button>
         </div>
+        {status === 'denied' && (
+          <p className="geo-error">
+            No se pudo obtener tu ubicación: revisa los permisos de ubicación del navegador para
+            este sitio e inténtalo de nuevo.
+          </p>
+        )}
+        {status === 'unsupported' && (
+          <p className="geo-error">Tu navegador no soporta geolocalización.</p>
+        )}
       </header>
 
       <div className="app__map">

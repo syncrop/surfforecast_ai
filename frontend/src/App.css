@@ -21,6 +21,14 @@
   font-size: 18px;
 }
 
+.geo-error {
+  flex: 1 0 100%;
+  order: 1;
+  margin: 0;
+  font-size: 12.5px;
+  color: #dc2626;
+}
+
 .app__controls {
   display: flex;
   flex-wrap: wrap;
@@ -91,32 +99,35 @@
   padding: 14px;
 }
 
-/* Mobile-first: stack map/sheet. From tablet width up, show them side by side. */
+/* Mobile-first: stack map/sheet. From tablet width up, show them side by side.
+   Grid (not absolute positioning) so the header's actual height - which
+   varies when it wraps to a second line, e.g. the geolocation error banner -
+   always pushes the map/sheet row down instead of overlapping it. */
 @media (min-width: 768px) {
   .app {
-    flex-direction: row;
+    display: grid;
+    grid-template-columns: 1fr 520px;
+    grid-template-rows: auto 1fr;
+    height: 100dvh;
   }
 
   .app__header {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 500;
+    grid-column: 1 / -1;
+    grid-row: 1;
   }
 
   .app__map {
-    flex: 1 1 auto;
+    grid-column: 1;
+    grid-row: 2;
     min-height: auto;
-    padding-top: 52px;
   }
 
   .app__sheet {
-    flex: 0 0 520px;
+    grid-column: 2;
+    grid-row: 2;
     border-radius: 0;
     box-shadow: -4px 0 16px rgba(0, 0, 0, 0.06);
     padding: 20px;
-    padding-top: 64px;
   }
 }
 
