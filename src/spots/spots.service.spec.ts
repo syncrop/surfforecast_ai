@@ -164,8 +164,56 @@ describe('SpotsService', () => {
       expect(result[0].score).toBe(70);
       expect(result[0].forecast?.forecastTime).toEqual(new Date('2026-01-05T18:00:00Z'));
       expect(result[0].dailyBest).toEqual([
-        { date: '2026-01-05', score: 70, conditions: 'good' },
-        { date: '2026-01-06', score: 55, conditions: 'fair' },
+        {
+          date: '2026-01-05',
+          score: 70,
+          conditions: 'good',
+          breakdown: {},
+          forecast: expect.objectContaining({
+            forecastTime: new Date('2026-01-05T18:00:00Z'),
+            waveHeight: 1.5,
+            tideHeight: 0.4,
+          }),
+        },
+        {
+          date: '2026-01-06',
+          score: 55,
+          conditions: 'fair',
+          breakdown: {},
+          forecast: expect.objectContaining({
+            forecastTime: new Date('2026-01-06T09:00:00Z'),
+          }),
+        },
+      ]);
+    });
+
+    it("includes each day's own forecast and breakdown, not just its score", async () => {
+      const { service, spotsRepository, scoringService } = makeService();
+      spotsRepository.findNearbyWithForecastWindow.mockResolvedValue([
+        makeRow({
+          id: 'a',
+          forecastId: 'a1',
+          forecastTime: new Date('2026-01-05T18:00:00Z'),
+          waveHeight: 2.1,
+          tideHeight: 0.9,
+        }),
+      ]);
+      scoringService.score.mockReturnValue({
+        score: 82,
+        breakdown: { swellDirection: 90, waveHeight: 100, wind: 70, period: 60 },
+        conditions: 'excellent',
+      });
+
+      const result = await service.getUpcomingRecommendations(28.6, -14.0, 20_000, 3);
+
+      expect(result[0].dailyBest).toEqual([
+        {
+          date: '2026-01-05',
+          score: 82,
+          conditions: 'excellent',
+          breakdown: { swellDirection: 90, waveHeight: 100, wind: 70, period: 60 },
+          forecast: expect.objectContaining({ waveHeight: 2.1, tideHeight: 0.9 }),
+        },
       ]);
     });
 

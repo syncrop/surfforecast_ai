@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { SurfSummaryService } from '../ai/surf-summary.service';
-import { Conditions } from '../scoring/scoring.types';
 import { ScoringService } from '../scoring/scoring.service';
 import { CreateSpotDto } from './dto/create-spot.dto';
 import { DayScoreDto, SpotRecommendationDto, UpcomingSpotRecommendationDto } from './dto/recommendation.dto';
@@ -239,17 +238,32 @@ export class SpotsService {
 
         const best = scored.reduce((a, b) => (b.result.score > a.result.score ? b : a));
 
-        const byDate = new Map<string, { score: number; conditions: Conditions }>();
-        for (const { row, result } of scored) {
-          const date = (row.forecastTime as Date).toISOString().slice(0, 10);
+        const byDate = new Map<string, (typeof scored)[number]>();
+        for (const entry of scored) {
+          const date = (entry.row.forecastTime as Date).toISOString().slice(0, 10);
           const existing = byDate.get(date);
-          if (!existing || result.score > existing.score) {
-            byDate.set(date, { score: result.score, conditions: result.conditions });
+          if (!existing || entry.result.score > existing.result.score) {
+            byDate.set(date, entry);
           }
         }
         const dailyBest: DayScoreDto[] = Array.from(byDate.entries())
           .sort(([a], [b]) => a.localeCompare(b))
-          .map(([date, v]) => ({ date, score: v.score, conditions: v.conditions }));
+          .map(([date, { row, result }]) => ({
+            date,
+            score: result.score,
+            conditions: result.conditions,
+            breakdown: result.breakdown,
+            forecast: {
+              forecastTime: row.forecastTime as Date,
+              fetchedAt: row.fetchedAt as Date,
+              waveHeight: row.waveHeight as number,
+              wavePeriod: row.wavePeriod as number,
+              swellDirection: row.swellDirection as number,
+              windSpeed: row.windSpeed as number,
+              windDirection: row.windDirection as number,
+              tideHeight: row.tideHeight,
+            },
+          }));
 
         return {
           spot,

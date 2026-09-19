@@ -59,6 +59,8 @@ export interface DayScore {
   date: string;
   score: number;
   conditions: Conditions;
+  breakdown: ScoreBreakdown;
+  forecast: ForecastUsed;
 }
 
 /** Same shape as SpotRecommendation, but score/breakdown/conditions/forecast describe the best window found in the requested range, not "now". */

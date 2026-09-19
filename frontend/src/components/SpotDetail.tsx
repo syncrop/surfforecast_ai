@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { DayScore, SpotRecommendation } from '../api/types';
 import { CONDITIONS_COLOR, CONDITIONS_LABEL, conditionsKey } from '../lib/conditions';
 import { formatDirection } from '../lib/direction';
@@ -10,19 +11,33 @@ const FACTOR_LABEL: Record<string, string> = {
 };
 
 const WEEKDAY_FORMAT = new Intl.DateTimeFormat('es-ES', { weekday: 'short', day: 'numeric' });
+const WEEKDAY_FORMAT_LONG = new Intl.DateTimeFormat('es-ES', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+});
 
 interface SpotDetailProps {
   recommendation: SpotRecommendation;
   regionSummary: string | null;
   onBack: () => void;
-  /** Present only when viewing the "upcoming days" mode: the best score reached each day. */
+  /** Present only when viewing the "upcoming days" mode: the best score/forecast reached each day. */
   dailyBest?: DayScore[];
 }
 
 export function SpotDetail({ recommendation, regionSummary, onBack, dailyBest }: SpotDetailProps) {
-  const { spot, score, breakdown, conditions, forecast } = recommendation;
-  const key = conditionsKey(conditions);
+  const { spot } = recommendation;
   const isUpcoming = dailyBest != null;
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  // Clicking a day in "Por día" drills into that day's own forecast/breakdown;
+  // by default (no click yet) the section shows the overall best window.
+  const activeDay = isUpcoming ? dailyBest.find((d) => d.date === selectedDate) ?? null : null;
+  const score = activeDay?.score ?? recommendation.score;
+  const breakdown = activeDay?.breakdown ?? recommendation.breakdown;
+  const conditions = activeDay?.conditions ?? recommendation.conditions;
+  const forecast = activeDay?.forecast ?? recommendation.forecast;
+  const key = conditionsKey(conditions);
 
   return (
     <div className="spot-detail">
@@ -48,16 +63,23 @@ export function SpotDetail({ recommendation, regionSummary, onBack, dailyBest }:
           <ul className="daily-best">
             {dailyBest.map((day) => {
               const dayKey = conditionsKey(day.conditions);
+              const isSelected = day.date === selectedDate;
               return (
-                <li key={day.date} className="daily-best__item">
-                  <span className="daily-best__date">
-                    {WEEKDAY_FORMAT.format(new Date(`${day.date}T12:00:00Z`))}
-                  </span>
-                  <span
-                    className="daily-best__dot"
-                    style={{ backgroundColor: CONDITIONS_COLOR[dayKey] }}
-                  />
-                  <span className="daily-best__score">{day.score}</span>
+                <li key={day.date}>
+                  <button
+                    type="button"
+                    className={`daily-best__item ${isSelected ? 'daily-best__item--selected' : ''}`}
+                    onClick={() => setSelectedDate(isSelected ? null : day.date)}
+                  >
+                    <span className="daily-best__date">
+                      {WEEKDAY_FORMAT.format(new Date(`${day.date}T12:00:00Z`))}
+                    </span>
+                    <span
+                      className="daily-best__dot"
+                      style={{ backgroundColor: CONDITIONS_COLOR[dayKey] }}
+                    />
+                    <span className="daily-best__score">{day.score}</span>
+                  </button>
                 </li>
               );
             })}
@@ -82,7 +104,13 @@ export function SpotDetail({ recommendation, regionSummary, onBack, dailyBest }:
 
       {forecast && (
         <section>
-          <h3>{isUpcoming ? 'Mejor momento' : 'Condiciones actuales'}</h3>
+          <h3>
+            {activeDay
+              ? WEEKDAY_FORMAT_LONG.format(new Date(`${activeDay.date}T12:00:00Z`))
+              : isUpcoming
+                ? 'Mejor momento'
+                : 'Condiciones actuales'}
+          </h3>
           <dl className="forecast-grid">
             <dt>Ola</dt>
             <dd>{forecast.waveHeight} m</dd>
@@ -94,6 +122,8 @@ export function SpotDetail({ recommendation, regionSummary, onBack, dailyBest }:
             <dd>
               {forecast.windSpeed} km/h · {formatDirection(forecast.windDirection)}
             </dd>
+            <dt>Marea</dt>
+            <dd>{forecast.tideHeight != null ? `${forecast.tideHeight} m` : 'No disponible'}</dd>
           </dl>
           <p className="forecast-time">
             Forecast de {new Date(forecast.forecastTime).toLocaleString('es-ES')}

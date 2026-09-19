@@ -304,7 +304,16 @@
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--bg);
+  color: var(--text);
+  font: inherit;
   font-size: 13px;
+  cursor: pointer;
+}
+
+.daily-best__item--selected {
+  border-color: var(--accent);
+  border-width: 2px;
+  padding: 7px 11px; /* compensate the thicker border so the card doesn't grow */
 }
 
 .daily-best__date {

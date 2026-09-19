@@ -48,6 +48,7 @@ export class SpotRecommendationDto {
   forecast: ForecastUsedDto | null;
 }
 
+@ApiExtraModels(ScoreBreakdownDto, ForecastUsedDto)
 export class DayScoreDto {
   @ApiProperty({ example: '2026-01-02', description: 'UTC calendar date (YYYY-MM-DD).' })
   date: string;
@@ -57,13 +58,20 @@ export class DayScoreDto {
 
   @ApiProperty({ enum: CONDITIONS_VALUES })
   conditions: Conditions;
+
+  @ApiProperty({ allOf: [{ $ref: getSchemaPath(ScoreBreakdownDto) }] })
+  breakdown: ScoreBreakdown;
+
+  @ApiProperty({ type: ForecastUsedDto, description: "That day's best-scoring hourly forecast (waves, wind, tide)." })
+  forecast: ForecastUsedDto;
 }
 
 /**
  * Same shape as {@link SpotRecommendationDto}, but `score`/`breakdown`/
  * `conditions`/`forecast` describe the best-scoring hourly window found
  * anywhere in the requested day range (not "now"). `dailyBest` gives the
- * per-day peak so the UI can show which day is worth going.
+ * per-day peak - each with its own forecast/breakdown - so the UI can show
+ * which day is worth going and drill into that day specifically.
  */
 @ApiExtraModels(DayScoreDto)
 export class UpcomingSpotRecommendationDto extends SpotRecommendationDto {
