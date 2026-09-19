@@ -1,0 +1,269 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.app__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+
+.app__header h1 {
+  font-size: 18px;
+}
+
+.app__controls {
+  display: flex;
+  gap: 8px;
+}
+
+.app__controls select,
+.app__controls button {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.app__controls button {
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.app__map {
+  flex: 1 1 42%;
+  min-height: 180px;
+}
+
+.map {
+  height: 100%;
+  width: 100%;
+}
+
+.app__sheet {
+  flex: 1 1 58%;
+  overflow-y: auto;
+  background: var(--surface);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+  padding: 14px;
+}
+
+/* Mobile-first: stack map/sheet. From tablet width up, show them side by side. */
+@media (min-width: 768px) {
+  .app {
+    flex-direction: row;
+  }
+
+  .app__header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 500;
+  }
+
+  .app__map {
+    flex: 1 1 65%;
+    min-height: auto;
+    padding-top: 52px;
+  }
+
+  .app__sheet {
+    flex: 0 0 380px;
+    border-radius: 0;
+    box-shadow: -4px 0 16px rgba(0, 0, 0, 0.06);
+    padding-top: 64px;
+  }
+}
+
+.empty-state {
+  color: var(--text-muted);
+  padding: 24px 4px;
+  text-align: center;
+}
+
+.empty-state--error {
+  color: #dc2626;
+}
+
+/* Spot list */
+.spot-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.spot-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.spot-row--selected {
+  border-color: var(--accent);
+}
+
+.spot-row__dot {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.spot-row__info {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.spot-row__name {
+  font-weight: 600;
+}
+
+.spot-row__meta {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.spot-row__score {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 13px;
+}
+
+.spot-row__score strong {
+  font-size: 16px;
+}
+
+.spot-row__conditions {
+  color: var(--text-muted);
+}
+
+/* Spot detail */
+.back-button {
+  border: none;
+  background: none;
+  color: var(--accent);
+  padding: 0 0 12px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.spot-detail__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  color: white;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.spot-detail__meta {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin: 6px 0 18px;
+  text-transform: capitalize;
+}
+
+.spot-detail section {
+  margin-bottom: 18px;
+}
+
+.spot-detail h3 {
+  font-size: 14px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.factor-bar {
+  display: grid;
+  grid-template-columns: 120px 1fr 32px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.factor-bar__track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.factor-bar__fill {
+  height: 100%;
+  background: var(--accent);
+}
+
+.factor-bar__value {
+  text-align: right;
+  color: var(--text-muted);
+}
+
+.forecast-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 0;
+}
+
+.forecast-grid dt {
+  color: var(--text-muted);
+}
+
+.forecast-grid dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.forecast-time {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.summary-text {
+  line-height: 1.5;
+}
+
+.source-link {
+  display: inline-block;
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 14px;
+}
