@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -8,6 +9,16 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, transform: true }),
   );
+
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('SurfForecast IA')
+    .setDescription('Surf spot recommendation API (Fuerteventura pilot)')
+    .setVersion('1.0')
+    .addApiKey({ type: 'apiKey', name: 'x-admin-key', in: 'header' }, 'admin-key')
+    .build();
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('docs', app, document);
+
   const config = app.get(ConfigService);
   await app.listen(config.get<number>('PORT', 3000));
 }
