@@ -21,7 +21,7 @@ const point: ForecastPoint = {
 function makeService() {
   const query = jest.fn();
   const dataSource = { query };
-  const provider = { getForecast: jest.fn() };
+  const provider = { getForecast: jest.fn(), getTide: jest.fn() };
   const spotsService = {
     getRegionRecommendations: jest.fn(),
     cacheRegionSummary: jest.fn(),
@@ -45,12 +45,13 @@ describe('ForecastsIngestService', () => {
 
       query
         .mockResolvedValueOnce([
-          { id: 'spotA', slug: 'spot-a', lat: 28.6, lon: -14.0 },
-          { id: 'spotB', slug: 'spot-b', lat: 28.7, lon: -14.1 },
+          { id: 'spotA', slug: 'spot-a', region: 'RegionX', lat: 28.6, lon: -14.0 },
+          { id: 'spotB', slug: 'spot-b', region: 'RegionX', lat: 28.7, lon: -14.1 },
         ]) // spots list
         .mockResolvedValueOnce(undefined) // INSERT for spotA
         .mockResolvedValueOnce([]); // distinct regions (empty, no region refresh needed)
 
+      provider.getTide.mockResolvedValueOnce([]); // RegionX tide
       provider.getForecast
         .mockResolvedValueOnce([point]) // spotA
         .mockRejectedValueOnce(new Error('network down')); // spotB
@@ -65,6 +66,54 @@ describe('ForecastsIngestService', () => {
       expect(insertSql).toContain('INSERT INTO "forecasts"');
       expectPlaceholdersMatchParams(insertSql, insertParams);
       expect(insertParams[0]).toBe('spotA');
+    });
+
+    it('fetches tide once per region, using the first spot as the anchor, and shares it across every spot in that region', async () => {
+      const { service, query, provider } = makeService();
+
+      query
+        .mockResolvedValueOnce([
+          { id: 'spotA', slug: 'spot-a', region: 'RegionX', lat: 28.6, lon: -14.0 },
+          { id: 'spotB', slug: 'spot-b', region: 'RegionX', lat: 28.7, lon: -14.1 },
+        ])
+        .mockResolvedValueOnce(undefined) // INSERT for spotA
+        .mockResolvedValueOnce(undefined) // INSERT for spotB
+        .mockResolvedValueOnce([]); // distinct regions
+
+      provider.getTide.mockResolvedValueOnce([
+        { time: new Date('2026-01-01T00:00:00Z'), tideHeight: -0.5 },
+      ]);
+      provider.getForecast.mockResolvedValue([point]); // same forecastTime for both spots
+
+      await service.ingestAll();
+
+      // One tide fetch for the whole region, anchored on the first spot - not one per spot.
+      expect(provider.getTide).toHaveBeenCalledTimes(1);
+      expect(provider.getTide).toHaveBeenCalledWith(28.6, -14.0);
+
+      const [, spotAParams] = query.mock.calls[1];
+      const [, spotBParams] = query.mock.calls[2];
+      // tideHeight is the 8th bound value per row (see the placeholder layout in ingestSpot).
+      expect(spotAParams[7]).toBe(-0.5);
+      expect(spotBParams[7]).toBe(-0.5);
+    });
+
+    it("falls back to null tideHeight for a region whose tide fetch fails, without blocking that region's spots", async () => {
+      const { service, query, provider } = makeService();
+
+      query
+        .mockResolvedValueOnce([{ id: 'spotA', slug: 'spot-a', region: 'RegionX', lat: 28.6, lon: -14.0 }])
+        .mockResolvedValueOnce(undefined) // INSERT for spotA
+        .mockResolvedValueOnce([]); // distinct regions
+
+      provider.getTide.mockRejectedValueOnce(new Error('tide API down'));
+      provider.getForecast.mockResolvedValueOnce([point]);
+
+      const result = await service.ingestAll();
+
+      expect(result).toEqual({ spots: 1, forecasts: 1 });
+      const [, spotAParams] = query.mock.calls[1];
+      expect(spotAParams[7]).toBeNull();
     });
 
     it('refreshes the cached summary per region, isolating a failure in one region from the rest', async () => {
@@ -90,6 +139,7 @@ describe('ForecastsIngestService', () => {
       expect(spotsService.cacheRegionSummary).toHaveBeenCalledWith('X', 'summary for X');
       // region Y's failure must not have thrown out of ingestAll or blocked region X
       expect(provider.getForecast).not.toHaveBeenCalled();
+      expect(provider.getTide).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ForecastPoint, MarineForecastProvider } from './marine-forecast.provider';
+import { ForecastPoint, MarineForecastProvider, TidePoint } from './marine-forecast.provider';
 
 const MARINE_URL = 'https://marine-api.open-meteo.com/v1/marine';
 const WEATHER_URL = 'https://api.open-meteo.com/v1/forecast';
@@ -21,7 +21,9 @@ interface OpenMeteoResponse {
 /**
  * Marine data (waves/swell) and standard weather data (wind) live on two
  * separate Open-Meteo endpoints; this provider fetches both and merges them
- * by timestamp. Open-Meteo has no tide data, so `tideHeight` is always null.
+ * by timestamp. Tide is fetched separately via {@link getTide} - it's a
+ * regional-scale phenomenon, not a per-spot one, so the ingest cron calls it
+ * once per region rather than once per spot.
  */
 @Injectable()
 export class OpenMeteoProvider implements MarineForecastProvider {
@@ -70,6 +72,27 @@ export class OpenMeteoProvider implements MarineForecastProvider {
         raw: { time: t, waveHeight, wavePeriod, swellDirection, ...wind },
       };
     });
+  }
+
+  /**
+   * Tide (sea level) for one representative point, meant to be shared across
+   * every spot in a region. `sea_level_height_msl` is a harmonic tidal
+   * model, in meters relative to mean sea level (oscillates around 0, not a
+   * port's usual "0 = lowest astronomical tide" datum).
+   */
+  async getTide(lat: number, lon: number): Promise<TidePoint[]> {
+    const marine = await this.fetchJson(MARINE_URL, {
+      latitude: lat,
+      longitude: lon,
+      hourly: 'sea_level_height_msl',
+      timezone: 'UTC',
+      forecast_days: FORECAST_DAYS,
+    });
+
+    return marine.hourly.time.map((t, i) => ({
+      time: new Date(`${t}Z`),
+      tideHeight: (marine.hourly.sea_level_height_msl as (number | null)[])[i] ?? null,
+    }));
   }
 
   private async fetchJson(

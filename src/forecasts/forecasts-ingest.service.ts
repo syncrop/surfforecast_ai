@@ -9,6 +9,7 @@ import { MARINE_FORECAST_PROVIDER, MarineForecastProvider } from './providers/ma
 interface SpotLocationRow {
   id: string;
   slug: string;
+  region: string;
   lat: number;
   lon: number;
 }
@@ -32,15 +33,32 @@ export class ForecastsIngestService {
   @Cron(CronExpression.EVERY_6_HOURS)
   async ingestAll(): Promise<IngestSummary> {
     const spots = await this.dataSource.query<SpotLocationRow[]>(
-      `SELECT "id", "slug", ST_Y("location"::geometry) AS lat, ST_X("location"::geometry) AS lon FROM "spots"`,
+      `SELECT "id", "slug", "region", ST_Y("location"::geometry) AS lat, ST_X("location"::geometry) AS lon FROM "spots"`,
     );
 
-    let forecasts = 0;
+    const byRegion = new Map<string, SpotLocationRow[]>();
     for (const spot of spots) {
-      try {
-        forecasts += await this.ingestSpot(spot.id, spot.lat, spot.lon);
-      } catch (err) {
-        this.logger.error(`Failed to ingest forecast for "${spot.slug}": ${(err as Error).message}`);
+      const group = byRegion.get(spot.region);
+      if (group) {
+        group.push(spot);
+      } else {
+        byRegion.set(spot.region, [spot]);
+      }
+    }
+
+    let forecasts = 0;
+    for (const [region, regionSpots] of byRegion) {
+      // Tide is a regional-scale phenomenon (unlike wave/wind, which do vary
+      // spot to spot), so it's fetched once per region using one spot as the
+      // anchor point and shared across every spot in that group - not
+      // refetched per spot.
+      const tideByTime = await this.fetchRegionTide(region, regionSpots[0]);
+      for (const spot of regionSpots) {
+        try {
+          forecasts += await this.ingestSpot(spot.id, spot.lat, spot.lon, tideByTime);
+        } catch (err) {
+          this.logger.error(`Failed to ingest forecast for "${spot.slug}": ${(err as Error).message}`);
+        }
       }
     }
 
@@ -48,6 +66,24 @@ export class ForecastsIngestService {
     await this.refreshRegionSummaries();
 
     return { spots: spots.length, forecasts };
+  }
+
+  /**
+   * A region's tide fetch failing only nulls out tideHeight for that
+   * region's spots - it must not block them from ingesting wave/wind data,
+   * and must not affect other regions.
+   */
+  private async fetchRegionTide(
+    region: string,
+    anchor: SpotLocationRow,
+  ): Promise<Map<number, number | null>> {
+    try {
+      const points = await this.provider.getTide(anchor.lat, anchor.lon);
+      return new Map(points.map((p) => [p.time.getTime(), p.tideHeight]));
+    } catch (err) {
+      this.logger.error(`Failed to fetch tide for region "${region}": ${(err as Error).message}`);
+      return new Map();
+    }
   }
 
   /**
@@ -73,7 +109,12 @@ export class ForecastsIngestService {
     this.logger.log(`Refreshed cached summaries for ${regions.length} regions.`);
   }
 
-  private async ingestSpot(spotId: string, lat: number, lon: number): Promise<number> {
+  private async ingestSpot(
+    spotId: string,
+    lat: number,
+    lon: number,
+    tideByTime: Map<number, number | null>,
+  ): Promise<number> {
     const points = await this.provider.getForecast(lat, lon);
     if (points.length === 0) {
       return 0;
@@ -82,6 +123,7 @@ export class ForecastsIngestService {
     const rowPlaceholders: string[] = [];
     const values: unknown[] = [];
     points.forEach((point, i) => {
+      const tideHeight = tideByTime.get(point.forecastTime.getTime()) ?? null;
       const base = i * 9;
       rowPlaceholders.push(
         `($${base + 1}, $${base + 2}, now(), $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}, $${base + 8}, $${base + 9})`,
@@ -94,7 +136,7 @@ export class ForecastsIngestService {
         point.swellDirection,
         point.windSpeed,
         point.windDirection,
-        point.tideHeight,
+        tideHeight,
         JSON.stringify(point.raw),
       );
     });
