@@ -25,6 +25,16 @@ const MIN_ZOOM_FOR_SEARCH = 8;
 const SPOT_SEARCH_ZOOM = 13;
 const REGION_SEARCH_ZOOM = 10;
 
+/**
+ * The detail view always shows a full 7-day outlook for whichever spot is
+ * open, regardless of whether the map is in "Ahora" or "Próximos días"
+ * mode (and regardless of that mode's own day-count selector) - so it's
+ * fetched independently, tight-radius around just that spot (100m is the
+ * backend's minimum radius) rather than reusing the map's area-wide query.
+ */
+const DETAIL_FORECAST_DAYS = 7;
+const DETAIL_QUERY_RADIUS_METERS = 100;
+
 const RADIUS_OPTIONS = [
   { label: '10 km', value: 10_000 },
   { label: '20 km', value: 20_000 },
@@ -119,17 +129,26 @@ export default function App() {
   const error = mode === 'now' ? now.error : upcoming.error;
   const recommendations = mode === 'now' ? now.data : upcoming.data;
 
-  const selectedRecommendation = recommendations.find((r) => r.spot.slug === selectedSlug) ?? null;
-  const selectedDailyBest =
-    mode === 'upcoming' && selectedRecommendation && 'dailyBest' in selectedRecommendation
-      ? selectedRecommendation.dailyBest
-      : undefined;
+  // The detail view is self-sufficient: given a selected slug, look up that
+  // spot's coordinates (from the already-fetched full spot list) and fetch
+  // its own 7-day outlook directly - independent of mode/days/radius/mapCenter,
+  // so opening a spot always shows the same thing no matter how you got there.
+  const selectedSpotInfo = allSpots.find((s) => s.slug === selectedSlug) ?? null;
+  const selectedDetail = useUpcomingRecommendations(
+    selectedSpotInfo?.lat ?? 0,
+    selectedSpotInfo?.lon ?? 0,
+    DETAIL_QUERY_RADIUS_METERS,
+    DETAIL_FORECAST_DAYS,
+    selectedSpotInfo != null,
+  );
+  const selectedRecommendation =
+    selectedDetail.data.find((r) => r.spot.slug === selectedSlug) ?? null;
 
-  // Fetched on-demand only while a spot's detail view is open in "now" mode -
-  // never on every map pan (see useRecommendations for the frequent path).
+  // Fetched on-demand only while a spot's detail view is open - never on
+  // every map pan (see useRecommendations for the frequent path).
   const { summary: regionSummary } = useRegionSummary(
     selectedRecommendation?.spot.region ?? null,
-    mode === 'now' && selectedRecommendation != null,
+    selectedRecommendation != null,
   );
 
   function selectMode(next: Mode) {
@@ -262,7 +281,27 @@ export default function App() {
             onSelectSpot={handleSelectFavorite}
             onToggleFavorite={toggleFavorite}
           />
-        ) : tooZoomedOut && !selectedRecommendation ? (
+        ) : selectedSlug ? (
+          // Always the spot's own 7-day fetch - independent of mode/zoom/list loading.
+          <>
+            {selectedDetail.loading && <p className="empty-state">Cargando spot…</p>}
+            {selectedDetail.error && (
+              <p className="empty-state empty-state--error">
+                No se pudo conectar con la API: {selectedDetail.error}
+              </p>
+            )}
+            {!selectedDetail.loading && !selectedDetail.error && selectedRecommendation && (
+              <SpotDetail
+                recommendation={selectedRecommendation}
+                regionSummary={regionSummary}
+                dailyBest={selectedRecommendation.dailyBest}
+                onBack={() => setSelectedSlug(null)}
+                isFavorite={isFavorite(selectedRecommendation.spot.slug)}
+                onToggleFavorite={() => toggleFavorite(selectedRecommendation.spot.slug)}
+              />
+            )}
+          </>
+        ) : tooZoomedOut ? (
           <p className="empty-state">
             🔍 Demasiado alejado para buscar spots. Acércate (zoom +) o usa el buscador.
           </p>
@@ -272,17 +311,7 @@ export default function App() {
             {error && (
               <p className="empty-state empty-state--error">No se pudo conectar con la API: {error}</p>
             )}
-            {!loading && !error && selectedRecommendation && (
-              <SpotDetail
-                recommendation={selectedRecommendation}
-                regionSummary={regionSummary}
-                dailyBest={selectedDailyBest}
-                onBack={() => setSelectedSlug(null)}
-                isFavorite={isFavorite(selectedRecommendation.spot.slug)}
-                onToggleFavorite={() => toggleFavorite(selectedRecommendation.spot.slug)}
-              />
-            )}
-            {!loading && !error && !selectedRecommendation && (
+            {!loading && !error && (
               <SpotList
                 recommendations={recommendations}
                 selectedSlug={selectedSlug}

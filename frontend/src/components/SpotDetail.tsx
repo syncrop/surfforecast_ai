@@ -22,8 +22,8 @@ interface SpotDetailProps {
   recommendation: SpotRecommendation;
   regionSummary: string | null;
   onBack: () => void;
-  /** Present only when viewing the "upcoming days" mode: the best score/forecast reached each day. */
-  dailyBest?: DayScore[];
+  /** Best score/forecast reached each day over the next 7 days - always fetched for whichever spot is open, regardless of the map's Ahora/Próximos días mode. */
+  dailyBest: DayScore[];
   isFavorite: boolean;
   onToggleFavorite: () => void;
 }
@@ -37,12 +37,11 @@ export function SpotDetail({
   onToggleFavorite,
 }: SpotDetailProps) {
   const { spot } = recommendation;
-  const isUpcoming = dailyBest != null;
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   // Clicking a day in "Por día" drills into that day's own forecast/breakdown;
-  // by default (no click yet) the section shows the overall best window.
-  const activeDay = isUpcoming ? dailyBest.find((d) => d.date === selectedDate) ?? null : null;
+  // by default (no click yet) the section shows the best moment overall.
+  const activeDay = dailyBest.find((d) => d.date === selectedDate) ?? null;
   const score = activeDay?.score ?? recommendation.score;
   const breakdown = activeDay?.breakdown ?? recommendation.breakdown;
   const conditions = activeDay?.conditions ?? recommendation.conditions;
@@ -78,7 +77,7 @@ export function SpotDetail({
         {spot.skillLevel}
       </p>
 
-      {isUpcoming && dailyBest.length > 0 && (
+      {dailyBest.length > 0 && (
         <section>
           <h3>Por día</h3>
           <ul className="daily-best">
@@ -128,9 +127,7 @@ export function SpotDetail({
           <h3>
             {activeDay
               ? WEEKDAY_FORMAT_LONG.format(new Date(`${activeDay.date}T12:00:00Z`))
-              : isUpcoming
-                ? 'Mejor momento'
-                : 'Condiciones actuales'}
+              : 'Mejor momento'}
           </h3>
           <dl className="forecast-grid">
             <dt>Ola</dt>
@@ -152,14 +149,12 @@ export function SpotDetail({
         </section>
       )}
 
-      {!isUpcoming && (
-        <section>
-          <h3>Resumen de la zona</h3>
-          <p className="summary-text">
-            {regionSummary ?? 'Aún no hay resumen generado para esta zona.'}
-          </p>
-        </section>
-      )}
+      <section>
+        <h3>Resumen de la zona</h3>
+        <p className="summary-text">
+          {regionSummary ?? 'Aún no hay resumen generado para esta zona.'}
+        </p>
+      </section>
     </div>
   );
 }
