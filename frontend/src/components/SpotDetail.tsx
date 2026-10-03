@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { DayScore, SpotRecommendation } from '../api/types';
 import { CONDITIONS_COLOR, CONDITIONS_LABEL, conditionsKey } from '../lib/conditions';
 import { formatDirection } from '../lib/direction';
+import { formatWindSpeed } from '../lib/units';
 
 const FACTOR_LABEL: Record<string, string> = {
   swellDirection: 'Dirección del swell',
@@ -120,7 +121,7 @@ export function SpotDetail({ recommendation, regionSummary, onBack, dailyBest }:
             <dd>{formatDirection(forecast.swellDirection)}</dd>
             <dt>Viento</dt>
             <dd>
-              {forecast.windSpeed} km/h · {formatDirection(forecast.windDirection)}
+              {formatWindSpeed(forecast.windSpeed)} · {formatDirection(forecast.windDirection)}
             </dd>
             <dt>Marea</dt>
             <dd>{forecast.tideHeight != null ? `${forecast.tideHeight} m` : 'No disponible'}</dd>
@@ -138,12 +139,6 @@ export function SpotDetail({ recommendation, regionSummary, onBack, dailyBest }:
             {regionSummary ?? 'Aún no hay resumen generado para esta zona.'}
           </p>
         </section>
-      )}
-
-      {spot.sourceUrl && (
-        <a className="source-link" href={spot.sourceUrl} target="_blank" rel="noreferrer">
-          Más info del spot →
-        </a>
       )}
     </div>
   );

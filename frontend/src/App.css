@@ -1,37 +1,54 @@
+/* Mobile-first: the map fills the whole screen; header and sheet float as
+   translucent "islands" on top of it (search bar, chip row, locate button,
+   results card) rather than taking their own dedicated layout rows. From
+   tablet width up this reverts to a conventional header + side-by-side
+   map/sheet layout - see the min-width:768px block below, which resets
+   every position/background override made here. */
 .app {
-  display: flex;
-  flex-direction: column;
+  position: relative;
   height: 100dvh;
   overflow: hidden;
 }
 
 .app__header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 500;
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 8px 12px;
-  padding: 10px 14px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
 }
 
-.app__header h1 {
-  font-size: 18px;
+.app__logo {
+  display: none;
+}
+
+.app__logo svg {
+  flex: 0 0 auto;
+  color: var(--accent);
 }
 
 .app__search-row {
-  flex: 1 0 100%;
+  order: 0;
+}
+
+.app__controls {
   order: 1;
 }
 
 .geo-error {
-  flex: 1 0 100%;
   order: 2;
   margin: 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(10, 15, 30, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   font-size: 12.5px;
-  color: #dc2626;
+  color: #fca5a5;
 }
 
 /* Search box */
@@ -42,10 +59,12 @@
 
 .search-box__input {
   width: 100%;
-  padding: 9px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--bg);
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 15, 30, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: var(--text);
   font-size: 14px;
 }
@@ -108,16 +127,18 @@
 .app__controls {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 8px;
 }
 
 .app__controls select,
 .app__controls button {
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--bg);
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 15, 30, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: var(--text);
   font-size: 13px;
 }
@@ -127,58 +148,135 @@
   white-space: nowrap;
 }
 
-/* "Ahora" / "Próximos N días" segmented control */
+/* "Ahora" / "Próximos N días" - two independent pills, not a fused segmented control */
 .mode-switch {
   display: flex;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
+  gap: 8px;
 }
 
 .mode-switch__option {
-  border: none;
-  border-radius: 0;
-  background: var(--bg);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(10, 15, 30, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: var(--text);
-  padding: 8px 10px;
+  padding: 8px 14px;
   font-size: 13px;
   cursor: pointer;
   white-space: nowrap;
 }
 
-.mode-switch__option + .mode-switch__option {
-  border-left: 1px solid var(--border);
-}
-
 .app__controls .mode-switch__option--active {
   background: var(--accent);
-  color: white;
+  border-color: var(--accent);
+  color: #0a0f1e;
 }
 
 .app__map {
-  flex: 1 1 42%;
-  min-height: 180px;
+  position: absolute;
+  inset: 0;
 }
 
 .map {
   height: 100%;
   width: 100%;
+  background: var(--bg);
 }
 
+/* Leaflet's own zoom control defaults to the map's top-left corner, which on
+   mobile is also where the floating search bar sits - push it down below
+   the floating header so they don't overlap. Desktop resets this below. */
+.leaflet-top.leaflet-left {
+  top: 112px;
+}
+
+.locate-button {
+  position: absolute;
+  z-index: 500;
+  top: 10px;
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 15, 30, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--text);
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.locate-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Spot pin markers (Leaflet divIcon) */
+.map-pin-wrapper {
+  background: transparent !important;
+  border: none !important;
+}
+
+.map-pin {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-pin::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--pin-color);
+  border: 2px solid rgba(10, 15, 30, 0.85);
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.map-pin--selected::before {
+  border-color: #ffffff;
+  border-width: 3px;
+}
+
+.map-pin__value {
+  position: relative;
+  z-index: 1;
+  transform: translateY(-3px);
+  color: #0a0f1e;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Floating results/detail card, overlaid on the bottom of the full-bleed map */
 .app__sheet {
-  flex: 1 1 58%;
+  position: absolute;
+  z-index: 400;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  max-height: 55dvh;
   overflow-y: auto;
-  background: var(--surface);
-  border-top-left-radius: 16px;
-  border-top-right-radius: 16px;
-  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+  background: rgba(18, 26, 46, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
   padding: 14px;
 }
 
-/* Mobile-first: stack map/sheet. From tablet width up, show them side by side.
-   Grid (not absolute positioning) so the header's actual height - which
-   varies when it wraps to a second line, e.g. the geolocation error banner -
-   always pushes the map/sheet row down instead of overlapping it. */
+/* From tablet width up: conventional header bar + side-by-side map/sheet,
+   undoing every mobile "floating island" override above. */
 @media (min-width: 768px) {
   .app {
     display: grid;
@@ -188,19 +286,69 @@
   }
 
   .app__header {
+    position: static;
     grid-column: 1 / -1;
     grid-row: 1;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px 12px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .app__logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .app__search-row {
+    flex: 1 0 100%;
+  }
+
+  .app__controls {
+    justify-content: flex-end;
+  }
+
+  .geo-error {
+    flex: 1 0 100%;
+    background: none;
+    backdrop-filter: none;
+    padding: 0;
+    color: #dc2626;
   }
 
   .app__map {
+    /* Still a positioned element (not "static") - it's the containing block
+       for .locate-button. Without this, that absolute child escapes up to
+       .app (position:relative, spans the whole page) and lands near the
+       header instead of staying over the map. */
+    position: relative;
     grid-column: 1;
     grid-row: 2;
-    min-height: auto;
+  }
+
+  .leaflet-top.leaflet-left {
+    top: 10px;
+  }
+
+  .locate-button {
+    top: 76px;
+    left: 10px;
+    right: auto;
+    border-radius: 6px;
   }
 
   .app__sheet {
+    position: static;
     grid-column: 2;
     grid-row: 2;
+    max-height: none;
+    background: var(--surface);
+    backdrop-filter: none;
+    border: none;
     border-radius: 0;
     box-shadow: -4px 0 16px rgba(0, 0, 0, 0.06);
     padding: 20px;
@@ -229,34 +377,28 @@
 
 .spot-row {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 6px;
   width: 100%;
-  padding: 10px;
+  padding: 12px;
   border-radius: 10px;
   border: 1px solid var(--border);
-  background: var(--bg);
+  background: var(--surface-alt);
   color: var(--text);
   cursor: pointer;
   text-align: left;
+  font: inherit;
 }
 
 .spot-row--selected {
   border-color: var(--accent);
 }
 
-.spot-row__dot {
-  flex: 0 0 auto;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-}
-
-.spot-row__info {
-  flex: 1 1 auto;
+.spot-row__top {
   display: flex;
-  flex-direction: column;
-  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .spot-row__name {
@@ -270,18 +412,38 @@
 
 .spot-row__score {
   flex: 0 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  font-size: 13px;
-}
-
-.spot-row__score strong {
-  font-size: 16px;
+  font-size: 18px;
+  font-weight: 700;
 }
 
 .spot-row__conditions {
   color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* Wave/wind/tide detail lines */
+.spot-row__lines {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.spot-row__line {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.spot-row__line--tide {
+  color: var(--accent);
+}
+
+.spot-row__wind-arrow {
+  display: inline-block;
+  color: var(--accent);
 }
 
 /* Daily best (upcoming-days mode) */
@@ -426,11 +588,4 @@
 
 .summary-text {
   line-height: 1.5;
-}
-
-.source-link {
-  display: inline-block;
-  color: var(--accent);
-  text-decoration: none;
-  font-size: 14px;
 }

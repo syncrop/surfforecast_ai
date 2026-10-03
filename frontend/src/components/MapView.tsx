@@ -1,8 +1,25 @@
 import { useEffect } from 'react';
-import { CircleMarker, MapContainer, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import { CircleMarker, MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import type { SpotRecommendation } from '../api/types';
 import { CONDITIONS_COLOR, conditionsKey } from '../lib/conditions';
 import type { GeoLocation } from '../hooks/useGeolocation';
+
+/** Teardrop pin with the wave height written on it, colored by conditions - built as a divIcon since Leaflet has no built-in labeled-pin marker. */
+function spotPinIcon(color: string, label: string | null, isSelected: boolean): L.DivIcon {
+  const size = isSelected ? 42 : 34;
+  return L.divIcon({
+    className: 'map-pin-wrapper',
+    html: `
+      <div class="map-pin ${isSelected ? 'map-pin--selected' : ''}" style="--pin-color: ${color}">
+        ${label ? `<span class="map-pin__value">${label}</span>` : ''}
+      </div>
+    `,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size],
+    popupAnchor: [0, -size],
+  });
+}
 
 interface RecenterProps {
   center: [number, number];
@@ -79,39 +96,30 @@ export function MapView({
       <Recenter center={center} />
       <MoveListener onMoveEnd={onMoveEnd} />
       <FlyTo request={flyToRequest} />
+      {/* Esri's dark gray canvas: free, no API key. Base (muted background) + Reference (labels/roads on top, transparent elsewhere). */}
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution="&copy; Esri"
+        url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
       />
+      <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}" />
 
       <CircleMarker
         center={center}
         radius={7}
-        pathOptions={{ color: '#2563eb', fillColor: '#2563eb', fillOpacity: 1, weight: 2 }}
+        pathOptions={{ color: '#f8fafc', fillColor: '#38bdf8', fillOpacity: 1, weight: 2 }}
       />
 
       {recommendations.map((rec) => {
         const isSelected = rec.spot.slug === selectedSlug;
         const color = CONDITIONS_COLOR[conditionsKey(rec.conditions)];
+        const label = rec.forecast ? `${rec.forecast.waveHeight.toFixed(1)}m` : null;
         return (
-          <CircleMarker
+          <Marker
             key={rec.spot.id}
-            center={[rec.spot.lat, rec.spot.lon]}
-            radius={isSelected ? 12 : 9}
-            pathOptions={{
-              color: isSelected ? '#0f172a' : '#ffffff',
-              weight: isSelected ? 3 : 2,
-              fillColor: color,
-              fillOpacity: 0.9,
-            }}
+            position={[rec.spot.lat, rec.spot.lon]}
+            icon={spotPinIcon(color, label, isSelected)}
             eventHandlers={{ click: () => onSelect(rec.spot.slug) }}
-          >
-            <Popup>
-              <strong>{rec.spot.name}</strong>
-              <br />
-              {rec.score != null ? `Score: ${rec.score}` : 'Sin forecast todavía'}
-            </Popup>
-          </CircleMarker>
+          />
         );
       })}
     </MapContainer>

@@ -120,7 +120,26 @@ export default function App() {
   return (
     <div className="app">
       <header className="app__header">
-        <h1>SurfForecast</h1>
+        <h1 className="app__logo">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <path
+              d="M2 17c1.5 1.5 3 1.5 4.5 0s3-1.5 4.5 0 3 1.5 4.5 0 3-1.5 4.5 0"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+            <path
+              d="M2 12c1.5 1.5 3 1.5 4.5 0s3-1.5 4.5 0 3 1.5 4.5 0 3-1.5 4.5 0"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              opacity="0.5"
+            />
+          </svg>
+          SurfForecast
+        </h1>
         <div className="app__controls">
           <div className="mode-switch">
             <button
@@ -153,9 +172,6 @@ export default function App() {
               </option>
             ))}
           </select>
-          <button onClick={requestLocation} disabled={status === 'locating'}>
-            {status === 'locating' ? 'Localizando…' : '📍 Mi ubicación'}
-          </button>
         </div>
         <div className="app__search-row">
           <SearchBox spots={allSpots} onSelect={handleSearchSelect} />
@@ -180,6 +196,28 @@ export default function App() {
           onMoveEnd={handleMapMoveEnd}
           flyToRequest={flyToRequest}
         />
+        <button
+          className="locate-button"
+          onClick={requestLocation}
+          disabled={status === 'locating'}
+          title="Mi ubicación"
+          aria-label="Mi ubicación"
+        >
+          {status === 'locating' ? (
+            '…'
+          ) : (
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <circle cx="12" cy="12" r="3" fill="currentColor" />
+              <path
+                d="M12 2v3M12 19v3M2 12h3M19 12h3"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+              <circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+          )}
+        </button>
       </div>
 
       <div className="app__sheet">
