@@ -257,6 +257,34 @@
   white-space: nowrap;
 }
 
+/* Swell grid markers (Leaflet divIcon) - arrow rotated to travel direction, colored by height, period labeled underneath. */
+.swell-arrow-wrapper {
+  background: transparent !important;
+  border: none !important;
+}
+
+.swell-arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+.swell-arrow__shape {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+}
+
+.swell-arrow__period {
+  margin-top: -2px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: rgba(10, 15, 30, 0.75);
+  color: #f8fafc;
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 /* Floating results/detail card, overlaid on the bottom of the full-bleed map */
 .app__sheet {
   position: absolute;
@@ -401,6 +429,27 @@
   gap: 8px;
 }
 
+.spot-row__top-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Favorite star toggle - used in spot-row__top, spot-detail__header, and the favorites list */
+.favorite-star {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.favorite-star--active {
+  color: #facc15;
+}
+
 .spot-row__name {
   font-weight: 600;
 }
@@ -511,6 +560,12 @@
   flex-wrap: wrap;
 }
 
+.spot-detail__header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .badge {
   color: white;
   padding: 4px 10px;
@@ -588,4 +643,63 @@
 
 .summary-text {
   line-height: 1.5;
+}
+
+/* Favorites, grouped by territory (Canarias / Andalucía / Portugal / Marruecos) */
+.favorites__group {
+  margin-bottom: 20px;
+}
+
+.favorites__group h3 {
+  font-size: 14px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+
+.favorites__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.favorites__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
+}
+
+.favorites__star {
+  flex: 0 0 auto;
+}
+
+.favorites__spot {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.favorites__spot-name {
+  font-weight: 600;
+}
+
+.favorites__spot-region {
+  font-size: 12.5px;
+  color: var(--text-muted);
 }

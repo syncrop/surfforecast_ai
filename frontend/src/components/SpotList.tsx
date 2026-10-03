@@ -7,9 +7,17 @@ interface SpotListProps {
   recommendations: SpotRecommendation[];
   selectedSlug: string | null;
   onSelect: (slug: string) => void;
+  isFavorite: (slug: string) => boolean;
+  onToggleFavorite: (slug: string) => void;
 }
 
-export function SpotList({ recommendations, selectedSlug, onSelect }: SpotListProps) {
+export function SpotList({
+  recommendations,
+  selectedSlug,
+  onSelect,
+  isFavorite,
+  onToggleFavorite,
+}: SpotListProps) {
   if (recommendations.length === 0) {
     return <p className="empty-state">No hay spots en este radio. Prueba a ampliarlo.</p>;
   }
@@ -29,13 +37,35 @@ export function SpotList({ recommendations, selectedSlug, onSelect }: SpotListPr
             >
               <div className="spot-row__top">
                 <span className="spot-row__name">🌊 {rec.spot.name}</span>
-                {rec.score != null ? (
-                  <span className="spot-row__score" style={{ color }}>
-                    {rec.score}
+                <span className="spot-row__top-right">
+                  {rec.score != null ? (
+                    <span className="spot-row__score" style={{ color }}>
+                      {rec.score}
+                    </span>
+                  ) : (
+                    <span className="spot-row__conditions">Sin datos</span>
+                  )}
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    className={`favorite-star ${isFavorite(rec.spot.slug) ? 'favorite-star--active' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleFavorite(rec.spot.slug);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onToggleFavorite(rec.spot.slug);
+                      }
+                    }}
+                    aria-label={isFavorite(rec.spot.slug) ? 'Quitar de favoritos' : 'Añadir a favoritos'}
+                    title={isFavorite(rec.spot.slug) ? 'Quitar de favoritos' : 'Añadir a favoritos'}
+                  >
+                    {isFavorite(rec.spot.slug) ? '★' : '☆'}
                   </span>
-                ) : (
-                  <span className="spot-row__conditions">Sin datos</span>
-                )}
+                </span>
               </div>
               <span className="spot-row__meta">
                 {rec.spot.region} · {(rec.distance / 1000).toFixed(1)} km

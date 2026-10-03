@@ -24,9 +24,18 @@ interface SpotDetailProps {
   onBack: () => void;
   /** Present only when viewing the "upcoming days" mode: the best score/forecast reached each day. */
   dailyBest?: DayScore[];
+  isFavorite: boolean;
+  onToggleFavorite: () => void;
 }
 
-export function SpotDetail({ recommendation, regionSummary, onBack, dailyBest }: SpotDetailProps) {
+export function SpotDetail({
+  recommendation,
+  regionSummary,
+  onBack,
+  dailyBest,
+  isFavorite,
+  onToggleFavorite,
+}: SpotDetailProps) {
   const { spot } = recommendation;
   const isUpcoming = dailyBest != null;
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -48,8 +57,19 @@ export function SpotDetail({ recommendation, regionSummary, onBack, dailyBest }:
 
       <header className="spot-detail__header">
         <h2>{spot.name}</h2>
-        <span className="badge" style={{ backgroundColor: CONDITIONS_COLOR[key] }}>
-          {score != null ? `${score} · ${CONDITIONS_LABEL[key]}` : 'Sin forecast todavía'}
+        <span className="spot-detail__header-right">
+          <span className="badge" style={{ backgroundColor: CONDITIONS_COLOR[key] }}>
+            {score != null ? `${score} · ${CONDITIONS_LABEL[key]}` : 'Sin forecast todavía'}
+          </span>
+          <button
+            type="button"
+            className={`favorite-star ${isFavorite ? 'favorite-star--active' : ''}`}
+            onClick={onToggleFavorite}
+            aria-label={isFavorite ? 'Quitar de favoritos' : 'Añadir a favoritos'}
+            title={isFavorite ? 'Quitar de favoritos' : 'Añadir a favoritos'}
+          >
+            {isFavorite ? '★' : '☆'}
+          </button>
         </span>
       </header>
 

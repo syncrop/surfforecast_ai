@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { MapView, type FlyToRequest, type MapMoveEnd } from './components/MapView';
+import { FavoritesList } from './components/FavoritesList';
 import { SearchBox } from './components/SearchBox';
 import { SpotList } from './components/SpotList';
 import { SpotDetail } from './components/SpotDetail';
 import { useAllSpots } from './hooks/useAllSpots';
+import { useFavorites } from './hooks/useFavorites';
 import { useGeolocation, type GeoLocation } from './hooks/useGeolocation';
 import { useRecommendations } from './hooks/useRecommendations';
 import { useRegionSummary } from './hooks/useRegionSummary';
+import { useSwellGrid } from './hooks/useSwellGrid';
 import { useUpcomingRecommendations } from './hooks/useUpcomingRecommendations';
+import type { MapBounds, SpotWithLocation } from './api/types';
 import type { SearchResult } from './lib/search';
 import './App.css';
 
@@ -33,16 +37,21 @@ const DAYS_OPTIONS = [3, 5, 7].map((value) => ({
 }));
 
 type Mode = 'now' | 'upcoming';
+type View = 'map' | 'favorites';
 
 export default function App() {
   const { location, status, requestLocation } = useGeolocation();
   const allSpots = useAllSpots();
+  const { favoriteSlugs, isFavorite, toggleFavorite } = useFavorites();
   const [radius, setRadius] = useState(20_000);
   const [mode, setMode] = useState<Mode>('now');
+  const [view, setView] = useState<View>('map');
   const [days, setDays] = useState(3);
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [tooZoomedOut, setTooZoomedOut] = useState(false);
   const [flyToRequest, setFlyToRequest] = useState<FlyToRequest | null>(null);
+  const [swellLayerEnabled, setSwellLayerEnabled] = useState(false);
+  const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
 
   // Spots are fetched around mapCenter, not the user's physical location, so
   // panning the map updates the results. mapCenter re-syncs to `location`
@@ -71,6 +80,7 @@ export default function App() {
       }
       setTooZoomedOut(false);
       setMapCenter({ lat: next.lat, lon: next.lon });
+      setMapBounds(next.bounds);
     }, MAP_MOVE_DEBOUNCE_MS);
   }
 
@@ -85,6 +95,16 @@ export default function App() {
     });
     setSelectedSlug(result.type === 'spot' ? result.key : null);
   }
+
+  function handleSelectFavorite(spot: SpotWithLocation) {
+    setView('map');
+    setTooZoomedOut(false);
+    setMapCenter({ lat: spot.lat, lon: spot.lon });
+    setFlyToRequest({ lat: spot.lat, lon: spot.lon, zoom: SPOT_SEARCH_ZOOM, requestId: Date.now() });
+    setSelectedSlug(spot.slug);
+  }
+
+  const swellGrid = useSwellGrid(mapBounds, swellLayerEnabled);
 
   const now = useRecommendations(mapCenter.lat, mapCenter.lon, radius);
   const upcoming = useUpcomingRecommendations(
@@ -172,6 +192,19 @@ export default function App() {
               </option>
             ))}
           </select>
+          <button
+            className={`mode-switch__option ${swellLayerEnabled ? 'mode-switch__option--active' : ''}`}
+            onClick={() => setSwellLayerEnabled((v) => !v)}
+            title="Mostrar dirección, altura y periodo del swell sobre el mapa"
+          >
+            🌊 Swell
+          </button>
+          <button
+            className={`mode-switch__option ${view === 'favorites' ? 'mode-switch__option--active' : ''}`}
+            onClick={() => setView((v) => (v === 'favorites' ? 'map' : 'favorites'))}
+          >
+            {view === 'favorites' ? '★' : '☆'} Favoritos{favoriteSlugs.length > 0 ? ` (${favoriteSlugs.length})` : ''}
+          </button>
         </div>
         <div className="app__search-row">
           <SearchBox spots={allSpots} onSelect={handleSearchSelect} />
@@ -195,6 +228,7 @@ export default function App() {
           onSelect={setSelectedSlug}
           onMoveEnd={handleMapMoveEnd}
           flyToRequest={flyToRequest}
+          swellGrid={swellGrid}
         />
         <button
           className="locate-button"
@@ -221,7 +255,14 @@ export default function App() {
       </div>
 
       <div className="app__sheet">
-        {tooZoomedOut && !selectedRecommendation ? (
+        {view === 'favorites' ? (
+          <FavoritesList
+            allSpots={allSpots}
+            favoriteSlugs={favoriteSlugs}
+            onSelectSpot={handleSelectFavorite}
+            onToggleFavorite={toggleFavorite}
+          />
+        ) : tooZoomedOut && !selectedRecommendation ? (
           <p className="empty-state">
             🔍 Demasiado alejado para buscar spots. Acércate (zoom +) o usa el buscador.
           </p>
@@ -237,6 +278,8 @@ export default function App() {
                 regionSummary={regionSummary}
                 dailyBest={selectedDailyBest}
                 onBack={() => setSelectedSlug(null)}
+                isFavorite={isFavorite(selectedRecommendation.spot.slug)}
+                onToggleFavorite={() => toggleFavorite(selectedRecommendation.spot.slug)}
               />
             )}
             {!loading && !error && !selectedRecommendation && (
@@ -244,6 +287,8 @@ export default function App() {
                 recommendations={recommendations}
                 selectedSlug={selectedSlug}
                 onSelect={setSelectedSlug}
+                isFavorite={isFavorite}
+                onToggleFavorite={toggleFavorite}
               />
             )}
           </>

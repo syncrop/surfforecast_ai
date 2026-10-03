@@ -281,7 +281,7 @@ async function run() {
          "skillLevel", "sourceUrl")
        VALUES
         ($1, $2, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography,
-         $5, 'Spain', $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+         $5, 'España', $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        ON CONFLICT ("slug") DO NOTHING`,
       [
         s.name, s.slug, s.lon, s.lat, s.region, s.breakType, s.bottom,
